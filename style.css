@@ -14,7 +14,7 @@
     --bot-msg-color: #3f3f46;
     /* Botón/Burbuja Gris Oscuro */
     --user-msg-color: #5d34ff;
-    /* Azul/Púrpura Vibrante (Como en la imagen de referencia) */
+    /* Azul/Púrpura Vibrante */
     --accent-color: #5d34ff;
     /* Acento Principal */
     --border-color: #333333;
@@ -28,7 +28,6 @@ body {
     color: var(--text-color);
     margin: 0;
     padding: 0;
-    /* Quitamos padding del body */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -37,17 +36,16 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* --- Contenedor Principal (App) --- */
+/* --- Contenedor Principal (Look de TARJETA FLOTANTE) --- */
 #app-container {
     width: 100%;
     max-width: 750px;
-    /* Un poco más ancho */
-    height: 100vh;
-    /* Ocupa toda la altura */
+    height: 90vh;
+    /* <-- CLAVE: No ocupa toda la pantalla para que "flote" */
     background-color: var(--card-color);
-    border-radius: 0;
-    /* Sin bordes redondeados para look app-like */
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+    /* <-- CLAVE: Bordes muy redondeados */
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -57,7 +55,6 @@ header {
     padding: 18px 25px;
     border-bottom: 1px solid var(--border-color);
     text-align: left;
-    /* Título a la izquierda */
     background-color: var(--card-color);
     position: sticky;
     top: 0;
@@ -69,7 +66,6 @@ header h1 {
     color: var(--text-color);
     font-size: 1.5em;
     font-weight: 800;
-    /* Letras muy gruesas */
 }
 
 header p {
@@ -78,7 +74,7 @@ header p {
     color: var(--text-color-muted);
 }
 
-/* --- Sección de la API Key (Compacta) --- */
+/* --- Sección de la API Key --- */
 #api-key-section {
     padding: 15px 25px;
     background-color: var(--input-bg-color);
@@ -106,7 +102,7 @@ header p {
     font-size: 0.9em;
 }
 
-/* --- Botones (Look moderno) --- */
+/* --- Botones --- */
 #save-key-btn,
 #clear-key-btn {
     padding: 12px 18px;
@@ -116,7 +112,6 @@ header p {
     font-weight: 600;
     transition: all 0.2s ease;
     white-space: nowrap;
-    /* Para que no salte el texto */
 }
 
 #save-key-btn {
@@ -147,11 +142,12 @@ header p {
     gap: 20px;
 }
 
-/* --- Burbujas de Chat (El look app de mensajería) --- */
+/* --- Burbujas de Chat (LOOK OVALADO Y SUAVE) --- */
 .message {
     padding: 14px 18px;
-    border-radius: 18px;
-    max-width: 75%;
+    border-radius: 25px;
+    /* <-- CLAVE: Lo hace ovalado */
+    max-width: 80%;
     line-height: 1.5;
     font-size: 0.95em;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -161,7 +157,9 @@ header p {
     background-color: var(--bot-msg-color);
     align-self: flex-start;
     border-top-left-radius: 4px;
-    /* Más moderno */
+    /* <-- Suaviza el borde superior */
+    border-bottom-left-radius: 25px;
+    /* <-- Curva */
     color: var(--text-color);
 }
 
@@ -170,9 +168,12 @@ header p {
     align-self: flex-end;
     color: white;
     border-top-right-radius: 4px;
+    /* <-- Suaviza el borde superior */
+    border-bottom-right-radius: 25px;
+    /* <-- Curva */
 }
 
-/* --- Área de Input (Al final, grande y limpio) --- */
+/* --- Área de Input --- */
 #chat-input-area {
     display: flex;
     padding: 20px 25px;
@@ -184,7 +185,6 @@ header p {
 #user-input {
     flex-grow: 1;
     padding: 16px;
-    /* Más grande */
     border: 1px solid var(--border-color);
     border-radius: 10px;
     background-color: var(--card-color);
@@ -193,25 +193,45 @@ header p {
     font-weight: 500;
 }
 
+#user-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(93, 52, 255, 0.25);
+}
+
 #send-btn {
     padding: 16px 20px;
     border-radius: 10px;
     background-color: var(--accent-color);
     font-weight: 600;
+    font-size: 1em;
+    transition: background-color 0.2s;
+}
+
+#send-btn:hover {
+    background-color: #4a29cc;
+}
+
+/* --- Estados Deshabilitados --- */
+#user-input:disabled,
+#send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* --- Estilo para Bloques de Código (v1.3) --- */
 .message pre {
     background-color: #0d0d0d;
-    /* Negro Profundo */
     border: none;
-    /* Quitamos el borde para limpieza */
     border-radius: 6px;
     padding: 15px;
     overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 .message code {
     font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 0.9em;
     color: #e5e5e5;
 }
