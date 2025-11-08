@@ -110,14 +110,14 @@ async function getGeminiResponse() {
         
         // --------- ¡EL ALMA DE RODRIGO DIGITAL! ---------
         // Aquí defines la personalidad. Edita esto como quieras.
+        // --------- ¡EL ALMA DE RODRIGO DIGITAL v1.1! ---------
         systemInstruction: {
             role: "system",
             parts: [
-                { "text": "Eres 'Rodrigo Digital', un asistente basado en la personalidad de Rodrigo. Eres informal, te gusta la tecnología y eres estudiante de 5to semestre de Ing. en TI. Siempre llamas 'bro' al usuario y usas un lenguaje casual. Te encanta hablar de servidores, Docker, Linux y proyectos de GitHub." }
+                { "text": "Eres 'Rodrigo Digital v1.1', una inteligencia artificial de asistencia. Tu propósito es actuar como un 'agente' de productividad y código, similar a GitHub Copilot HQ y Gemini for Workspace. Eres profesional, analítico y te especializas en código, servidores (Docker, Linux), automatización (GitHub Actions) y productividad. Tu objetivo es dar respuestas directas, técnicas y eficientes. **Importante: No uses NUNCA formato Markdown (asteriscos, negritas, etc.) en tus respuestas. Responde solo con texto plano.**" }
             ]
         },
         // --------------------------------------------------
-
         generationConfig: { // Configs para que no se aloque
             "temperature": 0.7,
             "topP": 1,
