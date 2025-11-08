@@ -10,10 +10,11 @@ const fileInput = document.getElementById('file-input');
 const fileBtn = document.getElementById('file-btn');
 
 // --- 2. Configuración ---
-const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-latest:generateContent?key=';
+const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
 let conversationHistory = [];
 const KEY_NAME = 'gemini-api-key';
 let selectedFile = null; // v1.5: Almacena el archivo seleccionado
+const REQUEST_TIMEOUT = 60000; // 60 segundos timeout
 
 // --- 3. Lógica de API Key (v1.2) ---
 document.addEventListener('DOMContentLoaded', checkForKey);
@@ -264,18 +265,51 @@ async function getGeminiResponse() {
         }
     };
 
-    const response = await fetch(API_URL + key, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error.message || 'Error en la API');
+    try {
+        const response = await fetch(API_URL + key, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData?.error?.message || `Error ${response.status}: ${response.statusText}`;
+            throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+        
+        // Validate response structure
+        if (!data || !data.candidates || data.candidates.length === 0) {
+            throw new Error('La API no devolvió respuestas. Verifica tu API key o intenta de nuevo.');
+        }
+
+        const candidate = data.candidates[0];
+        
+        // Check if response was blocked
+        if (candidate.finishReason === 'SAFETY' || candidate.finishReason === 'RECITATION') {
+            throw new Error(`Respuesta bloqueada por: ${candidate.finishReason}. Intenta reformular tu pregunta.`);
+        }
+
+        if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+            throw new Error('La API devolvió una respuesta vacía.');
+        }
+
+        const botText = candidate.content.parts[0].text;
+        return botText;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('La solicitud tardó demasiado. Intenta de nuevo o verifica tu conexión.');
+        }
+        throw error;
     }
-
-    const data = await response.json();
-    const botText = data.candidates[0].content.parts[0].text;
-    return botText;
 }
