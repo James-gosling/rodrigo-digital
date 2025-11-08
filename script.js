@@ -42,4 +42,106 @@ saveKeyBtn.addEventListener('click', () => {
 // Para que funcione con "Enter" y con el botón
 sendBtn.addEventListener('click', handleSendMessage);
 userInput.addEventListener('keydown', (e) => {
-    if
+    if (e.key === 'Enter' && !e.shiftKey) { // 'Enter' pero no 'Shift+Enter'
+        e.preventDefault(); // Evita que 'Enter' ponga un salto de línea
+        handleSendMessage();
+    }
+});
+
+async function handleSendMessage() {
+    const message = userInput.value.trim();
+    if (!message) return; // No hacer nada si el mensaje está vacío
+
+    // 1. Muestra tu mensaje en el chat
+    addMessageToHistory('user', message);
+    
+    // 2. Añade tu mensaje al historial de JS
+    conversationHistory.push({ role: 'user', parts: [{ text: message }] });
+
+    // 3. Limpia el input y muestra "Escribiendo..."
+    userInput.value = '';
+    const loadingMessage = addMessageToHistory('bot', 'Escribiendo...');
+
+    try {
+        // 4. Llama a la API de Gemini
+        const botResponse = await getGeminiResponse();
+        
+        // 5. Quita el "Escribiendo..." y pone la respuesta real
+        loadingMessage.remove();
+        addMessageToHistory('bot', botResponse);
+        
+        // 6. Añade la respuesta del bot al historial de JS
+        conversationHistory.push({ role: 'model', parts: [{ text: botResponse }] });
+
+    } catch (error) {
+        // Manejo de errores
+        loadingMessage.remove();
+        addMessageToHistory('bot', `¡Upps! Error, bro: ${error.message}`);
+        console.error(error);
+    }
+}
+
+// --- 5. Helper: Añadir Mensaje a la UI ---
+// Función que crea los divs de 'user' y 'bot' en el HTML
+function addMessageToHistory(role, text) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message', role);
+    
+    const p = document.createElement('p');
+    p.textContent = text; // Usar textContent es más seguro
+    messageElement.appendChild(p);
+    
+    chatHistory.appendChild(messageElement);
+    
+    // Auto-scroll: para que el chat siempre baje a lo último
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+    
+    return messageElement; // Lo retornamos para poder borrar el "Escribiendo..."
+}
+
+
+// --- 6. El Cerebro (Llamada a Gemini) ---
+// ESTA ES LA FUNCIÓN MÁS IMPORTANTE
+async function getGeminiResponse() {
+    const key = sessionStorage.getItem('gemini-api-key');
+    if (!key) throw new Error('No se encontró API key en la sesión.');
+
+    // Prepara el "paquete" para enviar a Google
+    const payload = {
+        contents: conversationHistory, // Envía TODO el historial
+        
+        // --------- ¡EL ALMA DE RODRIGO DIGITAL! ---------
+        // Aquí defines la personalidad. Edita esto como quieras.
+        systemInstruction: {
+            role: "system",
+            parts: [
+                { "text": "Eres 'Rodrigo Digital', un asistente basado en la personalidad de Rodrigo. Eres informal, te gusta la tecnología y eres estudiante de 5to semestre de Ing. en TI. Siempre llamas 'bro' al usuario y usas un lenguaje casual. Te encanta hablar de servidores, Docker, Linux y proyectos de GitHub." }
+            ]
+        },
+        // --------------------------------------------------
+
+        generationConfig: { // Configs para que no se aloque
+            "temperature": 0.7,
+            "topP": 1,
+            "topK": 1
+        }
+    };
+
+    // La llamada 'fetch'
+    const response = await fetch(API_URL + key, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error.message || 'Error en la API');
+    }
+
+    const data = await response.json();
+    
+    // Saca el texto de la respuesta (el camino puede ser complejo, pero este es)
+    const botText = data.candidates[0].content.parts[0].text;
+    return botText;
+}
