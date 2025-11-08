@@ -24,7 +24,9 @@
 
 body {
     font-family: "Inter", sans-serif;
-    background-color: var(--bg-color);
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a0d1a 50%, #0d1a0d 100%);
+    /* Matrix-style gradient: black to purple to green */
+    background-attachment: fixed;
     color: var(--text-color);
     margin: 0;
     padding: 0;
@@ -34,6 +36,23 @@ body {
     min-height: 100vh;
     box-sizing: border-box;
     -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Matrix-style animated background pattern */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(93, 52, 255, 0.03) 2px, rgba(93, 52, 255, 0.03) 4px),
+        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0, 255, 65, 0.03) 2px, rgba(0, 255, 65, 0.03) 4px);
+    pointer-events: none;
+    z-index: 0;
 }
 
 /* --- Contenedor Principal (Look de TARJETA FLOTANTE) --- */
@@ -49,6 +68,8 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
+    z-index: 1;
 }
 
 header {
@@ -115,8 +136,14 @@ header p {
 }
 
 #save-key-btn {
-    background-color: var(--accent-color);
+    background: linear-gradient(135deg, var(--accent-color) 0%, #7c3aed 100%);
     color: white;
+    box-shadow: 0 2px 8px rgba(93, 52, 255, 0.3);
+}
+
+#save-key-btn:hover {
+    background: linear-gradient(135deg, #4a29cc 0%, #6b21a8 100%);
+    box-shadow: 0 4px 12px rgba(93, 52, 255, 0.4);
 }
 
 #clear-key-btn {
@@ -164,13 +191,14 @@ header p {
 }
 
 .user {
-    background-color: var(--user-msg-color);
+    background: linear-gradient(135deg, var(--user-msg-color) 0%, #7c3aed 100%);
     align-self: flex-end;
     color: white;
     border-top-right-radius: 4px;
     /* <-- Suaviza el borde superior */
     border-bottom-right-radius: 25px;
     /* <-- Curva */
+    box-shadow: 0 2px 8px rgba(93, 52, 255, 0.3);
 }
 
 /* --- Área de Input --- */
@@ -224,14 +252,16 @@ header p {
 #send-btn {
     padding: 16px 20px;
     border-radius: 10px;
-    background-color: var(--accent-color);
+    background: linear-gradient(135deg, var(--accent-color) 0%, #7c3aed 100%);
     font-weight: 600;
     font-size: 1em;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(93, 52, 255, 0.3);
 }
 
 #send-btn:hover {
-    background-color: #4a29cc;
+    background: linear-gradient(135deg, #4a29cc 0%, #6b21a8 100%);
+    box-shadow: 0 4px 12px rgba(93, 52, 255, 0.4);
 }
 
 /* --- Estados Deshabilitados --- */
