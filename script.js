@@ -9,8 +9,7 @@ const sendBtn = document.getElementById('send-btn');
 
 // --- 2. Configuración ---
 // Usamos el modelo 1.5 Flash (rápido y potente)
-const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
-// Aquí guardaremos el historial para que el bot tenga contexto
+const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=';// Aquí guardaremos el historial para que el bot tenga contexto
 let conversationHistory = [];
 
 // --- 3. Lógica de la API Key ---
