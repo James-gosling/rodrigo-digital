@@ -1,1 +1,45 @@
- 
+ # Nombre del Workflow
+name: Deploy to GitHub Pages
+
+# Disparador: Cuándo debe correr esta acción
+on:
+  # Correrá cada vez que hagas 'push' a la rama 'main'
+  push:
+    branches:
+      - main
+  # Te permite correrlo manualmente desde GitHub si quieres
+  workflow_dispatch:
+
+# Permisos: Dale permiso a la acción para escribir en tu repo (para el despliegue)
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Tareas: Lo que va a hacer
+jobs:
+  # Solo hay una tarea: desplegar
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest # Usará un servidor Linux virtual
+    steps:
+      # 1. Trae tu código (index.html, style.css, etc.) al servidor virtual
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Configura GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # 3. "Construye" el sitio (como es estático, solo sube los archivos)
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.' # Sube todo desde la raíz de tu repo
+
+      # 4. Despliega el sitio en la URL final
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
