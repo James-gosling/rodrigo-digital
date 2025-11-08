@@ -1,4 +1,4 @@
-// --- 1. Conexiones (DOM) v1.2 ---
+// --- 1. Conexiones (DOM) v1.5 ---
 const apiKeyInput = document.getElementById('api-key');
 const saveKeyBtn = document.getElementById('save-key-btn');
 const clearKeyBtn = document.getElementById('clear-key-btn');
@@ -6,11 +6,14 @@ const keyStatus = document.getElementById('key-status');
 const chatHistory = document.getElementById('chat-history');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
+const fileInput = document.getElementById('file-input');
+const fileBtn = document.getElementById('file-btn');
 
 // --- 2. Configuración ---
 const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-latest:generateContent?key=';
 let conversationHistory = [];
 const KEY_NAME = 'gemini-api-key';
+let selectedFile = null; // v1.5: Almacena el archivo seleccionado
 
 // --- 3. Lógica de API Key (v1.2) ---
 document.addEventListener('DOMContentLoaded', checkForKey);
@@ -49,6 +52,7 @@ function activateApp() {
     clearKeyBtn.style.display = 'inline-block';
     userInput.disabled = false;
     sendBtn.disabled = false;
+    fileBtn.disabled = false; // v1.5: Habilitar botón de archivo
     if (chatHistory.children.length <= 1) {
         chatHistory.innerHTML = '';
         addMessageToHistory('bot', '¡Genial, bro! Tu clave ya estaba guardada. ¿Qué onda?');
@@ -63,10 +67,11 @@ function deactivateApp() {
     clearKeyBtn.style.display = 'none';
     userInput.disabled = true;
     sendBtn.disabled = true;
-    chatHistory.innerHTML = '<div class="message bot"><p>Hola bro, soy Rodrigo Digital v1.3. Pega tu API key arriba para empezar.</p></div>';
+    fileBtn.disabled = true; // v1.5: Deshabilitar botón de archivo
+    chatHistory.innerHTML = '<div class="message bot"><p>Hola bro, soy Rodrigo Digital v1.5. Pega tu API key arriba para empezar.</p></div>';
 }
 
-// --- 4. Lógica de Envío (Sin cambios) ---
+// --- 4. Lógica de Envío (v1.5 con File Upload) ---
 sendBtn.addEventListener('click', handleSendMessage);
 userInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -75,19 +80,57 @@ userInput.addEventListener('keydown', (e) => {
     }
 });
 
+// v1.5: File Upload Logic
+fileBtn.addEventListener('click', () => {
+    fileInput.click();
+});
+
+fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        selectedFile = file;
+        fileBtn.textContent = `📎 ${file.name}`;
+        fileBtn.style.backgroundColor = '#5d34ff';
+    }
+});
+
 async function handleSendMessage() {
     const message = userInput.value.trim();
-    if (!message) return;
+    
+    // v1.5: Leer el archivo si existe
+    let finalMessage = '';
+    if (selectedFile) {
+        try {
+            const fileContent = await readFileContent(selectedFile);
+            finalMessage = `[FILE_CONTENT_START]\n${fileContent}\n[FILE_CONTENT_END]\n`;
+            if (message) {
+                finalMessage += `[USER_PROMPT]\n${message}`;
+            }
+            // Mostrar al usuario que se envió un archivo
+            addMessageToHistory('user', `📎 Archivo: ${selectedFile.name}\n${message || '(Analiza este archivo)'}`);
+        } catch (error) {
+            addMessageToHistory('bot', `Error al leer el archivo: ${error.message}`);
+            return;
+        }
+        // Reset file input
+        selectedFile = null;
+        fileInput.value = '';
+        fileBtn.textContent = '📎 Subir Archivo';
+        fileBtn.style.backgroundColor = '';
+    } else {
+        if (!message) return;
+        finalMessage = message;
+        addMessageToHistory('user', message);
+    }
 
-    addMessageToHistory('user', message);
-    conversationHistory.push({ role: 'user', parts: [{ text: message }] });
+    conversationHistory.push({ role: 'user', parts: [{ text: finalMessage }] });
     userInput.value = '';
     const loadingMessage = addMessageToHistory('bot', 'Escribiendo...');
 
     try {
         const botResponse = await getGeminiResponse();
         loadingMessage.remove(); // Quita el "Escribiendo..."
-        addMessageToHistory('bot', botResponse); // <-- Pasa la respuesta al nuevo renderer
+        await addMessageToHistory('bot', botResponse); // v1.5: Await para typewriter
         conversationHistory.push({ role: 'model', parts: [{ text: botResponse }] });
     } catch (error) {
         loadingMessage.remove();
@@ -96,30 +139,104 @@ async function handleSendMessage() {
     }
 }
 
-// --- 5. Helper: Añadir Mensaje a la UI (¡MEJORADO v1.3!) ---
-function addMessageToHistory(role, text) {
+// v1.5: Helper para leer archivos
+function readFileContent(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Error al leer el archivo'));
+        reader.readAsText(file);
+    });
+}
+
+// --- 5. Helper: Añadir Mensaje a la UI (¡MEJORADO v1.5 con Typewriter!) ---
+async function addMessageToHistory(role, text) {
     const messageElement = document.createElement('div');
     messageElement.classList.add('message', role);
-
-    // (NUEVO) HACK DE RENDERIZADO DE CÓDIGO
-    // Reemplaza los ``` (con o sin 'javascript', 'python', etc.) con <pre><code>
-    // y los ``` de cierre con </code></pre>
-    // ¡Esto nos permite renderizar código sin librerías externas!
-    let processedText = text.replace(/```(\w*)\n/g, '<pre><code>\n'); // Apertura
-    processedText = processedText.replace(/```/g, '</code></pre>'); // Cierre
-
-    // Si no es un bloque de código, envuélvelo en <p>
-    if (!processedText.startsWith('<pre>')) {
-        const p = document.createElement('p');
-        p.textContent = text; // Usamos textContent (seguro) para texto normal
-        messageElement.appendChild(p);
-    } else {
-        messageElement.innerHTML = processedText; // Usamos innerHTML (con cuidado) SOLO para el código
-    }
-
     chatHistory.appendChild(messageElement);
     chatHistory.scrollTop = chatHistory.scrollHeight;
+
+    // v1.5: Typewriter effect solo para bot
+    if (role === 'bot') {
+        await typewriterEffect(messageElement, text);
+    } else {
+        // Usuario: mostrar inmediatamente
+        const p = document.createElement('p');
+        p.textContent = text;
+        messageElement.appendChild(p);
+    }
+
     return messageElement;
+}
+
+// v1.5: Efecto Typewriter con soporte para bloques de código
+async function typewriterEffect(element, text) {
+    const delay = 30; // 30ms por carácter
+    
+    // Detectar si hay bloques de código
+    const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    
+    // Separar texto normal de bloques de código
+    while ((match = codeBlockRegex.exec(text)) !== null) {
+        // Texto antes del bloque de código
+        if (match.index > lastIndex) {
+            parts.push({
+                type: 'text',
+                content: text.substring(lastIndex, match.index)
+            });
+        }
+        // Bloque de código
+        parts.push({
+            type: 'code',
+            language: match[1],
+            content: match[2]
+        });
+        lastIndex = match.index + match[0].length;
+    }
+    
+    // Texto restante después del último bloque de código
+    if (lastIndex < text.length) {
+        parts.push({
+            type: 'text',
+            content: text.substring(lastIndex)
+        });
+    }
+    
+    // Si no hay bloques de código, todo es texto
+    if (parts.length === 0) {
+        parts.push({
+            type: 'text',
+            content: text
+        });
+    }
+    
+    // Renderizar cada parte
+    for (const part of parts) {
+        if (part.type === 'code') {
+            // Renderizar bloque de código completo (sin typewriter dentro del código)
+            const pre = document.createElement('pre');
+            const code = document.createElement('code');
+            code.textContent = part.content;
+            pre.appendChild(code);
+            element.appendChild(pre);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+            // Pequeña pausa después del bloque de código
+            await new Promise(resolve => setTimeout(resolve, delay * 10));
+        } else {
+            // Renderizar texto con efecto typewriter
+            const p = document.createElement('p');
+            element.appendChild(p);
+            
+            for (let i = 0; i < part.content.length; i++) {
+                p.textContent += part.content[i];
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
 }
 
 
@@ -131,11 +248,11 @@ async function getGeminiResponse() {
     const payload = {
         contents: conversationHistory,
 
-        // --------- ¡EL ALMA DE RODRIGO DIGITAL v1.3! ---------
+        // --------- ¡EL ALMA DE RODRIGO DIGITAL v1.5! ---------
         systemInstruction: {
             role: "system",
             parts: [
-                { "text": "Eres 'Rodrigo Digital v1.3', una inteligencia artificial de asistencia. Tu propósito es actuar como un 'agente' de productividad y código. Eres profesional, analítico y te especializas en código (Python, JS, Docker, Linux) y automatización (GitHub Actions). **Importante: No uses NUNCA formato Markdown (como asteriscos para negritas o itálicas). Responde solo con texto plano. LA ÚNICA EXCEPCIÓN: SÍ debes usar backticks (```) para envolver cualquier bloque de código.**" }
+                { "text": "Eres 'Rodrigo Digital v1.5', una inteligencia artificial de asistencia. Tu propósito es actuar como un 'agente' de productividad y código. Eres profesional, analítico y te especializas en código (Python, JS, Docker, Linux) y automatización (GitHub Actions). **Importante: No uses NUNCA formato Markdown (como asteriscos para negritas o itálicas). Responde solo con texto plano. LA ÚNICA EXCEPCIÓN: SÍ debes usar backticks (```) para envolver cualquier bloque de código.**" }
             ]
         },
         // --------------------------------------------------
