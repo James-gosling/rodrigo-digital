@@ -182,3 +182,20 @@ header p {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* --- Estilo para el botón de Borrar (v1.2) --- */
+#clear-key-btn {
+    padding: 8px 12px;
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    background-color: #dc3545; /* Un rojo "peligro" */
+    color: white;
+    font-weight: bold;
+    transition: background-color 0.2s;
+    display: none; /* Empezará oculto */
+}
+
+#clear-key-btn:hover {
+    background-color: #c82333;
+}
