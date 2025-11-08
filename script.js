@@ -1,7 +1,7 @@
-// --- 1. Conexiones (DOM) ---
-// Aquí conectamos el JS con todas las piezas del HTML
+// --- 1. Conexiones (DOM) v1.2 ---
 const apiKeyInput = document.getElementById('api-key');
 const saveKeyBtn = document.getElementById('save-key-btn');
+const clearKeyBtn = document.getElementById('clear-key-btn'); // <-- ¡NUEVO!
 const keyStatus = document.getElementById('key-status');
 const chatHistory = document.getElementById('chat-history');
 const userInput = document.getElementById('user-input');
@@ -10,122 +10,146 @@ const sendBtn = document.getElementById('send-btn');
 // --- 2. Configuración ---
 const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-latest:generateContent?key=';
 let conversationHistory = [];
+const KEY_NAME = 'gemini-api-key'; // <-- (Buena práctica)
 
-// --- 3. Lógica de la API Key ---
-// Esto se ejecuta cuando das clic en "Guardar Clave"
+// --- 3. Lógica de API Key (La Magia v1.2) ---
+
+// (NUEVO) Esto se ejecuta en cuanto carga la página
+document.addEventListener('DOMContentLoaded', checkForKey);
+
+// (NUEVO) Revisa si la clave YA EXISTE en localStorage
+function checkForKey() {
+    const key = localStorage.getItem(KEY_NAME);
+    if (key) {
+        // ¡Sí existe! Activa la app y esconde el input de la clave
+        activateApp();
+    } else {
+        // No existe. Muestra la sección para pegar la clave
+        deactivateApp();
+    }
+}
+
+// (NUEVO) Lógica para guardar la clave
 saveKeyBtn.addEventListener('click', () => {
     const key = apiKeyInput.value.trim();
     if (key) {
-        // (Clave de seguridad) Lo guardamos en 'sessionStorage'.
-        // Esto es seguro: la clave vive en tu navegador y se borra al cerrar la pestaña.
-        // NUNCA toca el código de GitHub.
-        sessionStorage.setItem('gemini-api-key', key);
-        
-        // Actualizamos la UI
-        keyStatus.textContent = 'Estado: ✅ ¡Clave guardada en esta sesión!';
-        keyStatus.style.color = '#28a745'; // verde
-        userInput.disabled = false;
-        sendBtn.disabled = false;
-        
-        // Limpiamos el mensaje inicial y damos bienvenida
-        chatHistory.innerHTML = ''; // Borra el "pega tu clave"
-        addMessageToHistory('bot', '¡Genial, bro! Ya estoy listo. ¿Qué onda?');
+        // ¡LA CLAVE! Usamos localStorage en lugar de sessionStorage
+        localStorage.setItem(KEY_NAME, key);
+        activateApp();
     } else {
         keyStatus.textContent = 'Estado: ❌ No has puesto una clave';
         keyStatus.style.color = '#dc3545'; // rojo
     }
 });
 
-// --- 4. Lógica de Envío ---
-// Para que funcione con "Enter" y con el botón
+// (NUEVO) Lógica para borrar la clave
+clearKeyBtn.addEventListener('click', () => {
+    localStorage.removeItem(KEY_NAME);
+    location.reload(); // Recarga la página para resetear todo
+});
+
+// (NUEVO) Función para activar la app (cuando SÍ hay clave)
+function activateApp() {
+    // Esconde el input de la clave y el botón de guardar
+    apiKeyInput.style.display = 'none';
+    saveKeyBtn.style.display = 'none';
+    
+    // Muestra el estado "OK" y el botón de "Borrar Clave"
+    keyStatus.textContent = 'Estado: ✅ ¡Clave guardada permanentemente!';
+    keyStatus.style.color = '#28a745';
+    clearKeyBtn.style.display = 'inline-block'; // <-- La muestra
+
+    // Activa el chat
+    userInput.disabled = false;
+    sendBtn.disabled = false;
+    
+    // Limpia el chat si es la primera vez
+    if (chatHistory.children.length <= 1) { // Si solo está el mensaje de "bienvenida"
+        chatHistory.innerHTML = ''; 
+        addMessageToHistory('bot', '¡Genial, bro! Tu clave ya estaba guardada. ¿Qué onda?');
+    }
+}
+
+// (NUEVO) Función para desactivar la app (cuando NO hay clave)
+function deactivateApp() {
+    // Muestra el input de clave y el botón de guardar
+    apiKeyInput.style.display = 'inline-block';
+    saveKeyBtn.style.display = 'inline-block';
+    
+    // Muestra el estado "NO" y esconde el botón de "Borrar"
+    keyStatus.textContent = 'Estado: ❌ No hay clave';
+    keyStatus.style.color = '#dc3545';
+    clearKeyBtn.style.display = 'none'; // <-- La esconde
+
+    // Desactiva el chat
+    userInput.disabled = true;
+    sendBtn.disabled = true;
+    chatHistory.innerHTML = '<div class="message bot"><p>Hola bro, soy Rodrigo Digital v1.2. Pega tu API key arriba para empezar.</p></div>';
+}
+
+// --- 4. Lógica de Envío (Sin cambios) ---
 sendBtn.addEventListener('click', handleSendMessage);
 userInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { // 'Enter' pero no 'Shift+Enter'
-        e.preventDefault(); // Evita que 'Enter' ponga un salto de línea
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
         handleSendMessage();
     }
 });
 
 async function handleSendMessage() {
     const message = userInput.value.trim();
-    if (!message) return; // No hacer nada si el mensaje está vacío
+    if (!message) return;
 
-    // 1. Muestra tu mensaje en el chat
     addMessageToHistory('user', message);
-    
-    // 2. Añade tu mensaje al historial de JS
     conversationHistory.push({ role: 'user', parts: [{ text: message }] });
-
-    // 3. Limpia el input y muestra "Escribiendo..."
     userInput.value = '';
     const loadingMessage = addMessageToHistory('bot', 'Escribiendo...');
 
     try {
-        // 4. Llama a la API de Gemini
         const botResponse = await getGeminiResponse();
-        
-        // 5. Quita el "Escribiendo..." y pone la respuesta real
         loadingMessage.remove();
         addMessageToHistory('bot', botResponse);
-        
-        // 6. Añade la respuesta del bot al historial de JS
         conversationHistory.push({ role: 'model', parts: [{ text: botResponse }] });
-
     } catch (error) {
-        // Manejo de errores
         loadingMessage.remove();
         addMessageToHistory('bot', `¡Upps! Error, bro: ${error.message}`);
         console.error(error);
     }
 }
 
-// --- 5. Helper: Añadir Mensaje a la UI ---
-// Función que crea los divs de 'user' y 'bot' en el HTML
+// --- 5. Helper: Añadir Mensaje a la UI (Sin cambios) ---
 function addMessageToHistory(role, text) {
     const messageElement = document.createElement('div');
     messageElement.classList.add('message', role);
-    
     const p = document.createElement('p');
-    p.textContent = text; // Usar textContent es más seguro
+    p.textContent = text;
     messageElement.appendChild(p);
-    
     chatHistory.appendChild(messageElement);
-    
-    // Auto-scroll: para que el chat siempre baje a lo último
     chatHistory.scrollTop = chatHistory.scrollHeight;
-    
-    return messageElement; // Lo retornamos para poder borrar el "Escribiendo..."
+    return messageElement;
 }
 
-
 // --- 6. El Cerebro (Llamada a Gemini) ---
-// ESTA ES LA FUNCIÓN MÁS IMPORTANTE
+// (Modificado para usar la KEY_NAME de localStorage)
 async function getGeminiResponse() {
-    const key = sessionStorage.getItem('gemini-api-key');
-    if (!key) throw new Error('No se encontró API key en la sesión.');
+    const key = localStorage.getItem(KEY_NAME); // <-- ¡USA LOCALSTORAGE!
+    if (!key) throw new Error('No se encontró API key en localStorage.');
 
-    // Prepara el "paquete" para enviar a Google
     const payload = {
-        contents: conversationHistory, // Envía TODO el historial
-        
-        // --------- ¡EL ALMA DE RODRIGO DIGITAL! ---------
-        // Aquí defines la personalidad. Edita esto como quieras.
-        // --------- ¡EL ALMA DE RODRIGO DIGITAL v1.1! ---------
+        contents: conversationHistory,
         systemInstruction: {
             role: "system",
             parts: [
-                { "text": "Eres 'Rodrigo Digital v1.1', una inteligencia artificial de asistencia. Tu propósito es actuar como un 'agente' de productividad y código, similar a GitHub Copilot HQ y Gemini for Workspace. Eres profesional, analítico y te especializas en código, servidores (Docker, Linux), automatización (GitHub Actions) y productividad. Tu objetivo es dar respuestas directas, técnicas y eficientes. **Importante: No uses NUNCA formato Markdown (asteriscos, negritas, etc.) en tus respuestas. Responde solo con texto plano.**" }
+                { "text": "Eres 'Rodrigo Digital v1.2', una inteligencia artificial de asistencia. Tu propósito es actuar como un 'agente' de productividad y código, similar a GitHub Copilot HQ y Gemini for Workspace. Eres profesional, analítico y te especializas en código, servidores (Docker, Linux), automatización (GitHub Actions) y productividad. Tu objetivo es dar respuestas directas, técnicas y eficientes. **Importante: No uses NUNCA formato Markdown (asteriscos, negritas, etc.) en tus respuestas. Responde solo con texto plano.**" }
             ]
         },
-        // --------------------------------------------------
-        generationConfig: { // Configs para que no se aloque
+        generationConfig: {
             "temperature": 0.7,
             "topP": 1,
             "topK": 1
         }
     };
 
-    // La llamada 'fetch'
     const response = await fetch(API_URL + key, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -138,8 +162,6 @@ async function getGeminiResponse() {
     }
 
     const data = await response.json();
-    
-    // Saca el texto de la respuesta (el camino puede ser complejo, pero este es)
     const botText = data.candidates[0].content.parts[0].text;
     return botText;
 }
