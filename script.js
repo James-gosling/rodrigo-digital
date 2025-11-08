@@ -35,9 +35,10 @@ saveKeyBtn.addEventListener('click', () => {
     }
 });
 
+// (V1.4) Lógica para borrar la clave
 clearKeyBtn.addEventListener('click', () => {
     localStorage.removeItem(KEY_NAME);
-    location.reload();
+    deactivateApp(); // Ya no recargamos toda la página
 });
 
 function activateApp() {
